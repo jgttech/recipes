@@ -70,7 +70,7 @@ In subsequent steps, `<BUNDLE>` refers to this staging subdirectory. All file wr
 
 ### Step 5: Write the markdown file
 
-Write to `<BUNDLE>/grocery-list.<unix-timestamp>.md` with this structure:
+Write to `<BUNDLE>/grocery-list.<unix-timestamp>.md` as a single aggregated shopping list. Recipe attribution lives next to each item so the user always knows which recipe an ingredient is for.
 
 ```markdown
 # Grocery List
@@ -78,29 +78,27 @@ Write to `<BUNDLE>/grocery-list.<unix-timestamp>.md` with this structure:
 **Generated:** <ISO 8601 datetime, local time zone>
 
 **For:**
-- [<Recipe 1 title>](<source url 1>)
-- [<Recipe 2 title>](<source url 2>)
+- [<Recipe 1 title>](<source url 1>) · *[archive ↗](<archive_url 1>)*
+- [<Recipe 2 title>](<source url 2>) · *[archive ↗](<archive_url 2>)*
 
-## [<Recipe 1 title>](<source url 1>)
-*[offline archive ↗](<archive_url 1>)*
+## Shopping List
 
-- [ ] <ingredient 1>
-- [ ] <ingredient 2>
+- [ ] <ingredient text> — *<Recipe title>*
+- [ ] <ingredient text> — *<Recipe A>, <Recipe B>*
+- [ ] ...
 
 ### For Serving
 
-- [ ] <serving item 1>
-
-## [<Recipe 2 title>](<source url 2>)
-*[offline archive ↗](<archive_url 2>)*
-
-- [ ] <ingredient 1>
-- [ ] <ingredient 2>
+- [ ] <serving item text> — *<Recipe title>*
 ```
 
-Per-recipe section headings make it easy to see which item came from where while shopping. Keep "For Serving" subsections under their parent recipe.
+Rules:
+- **One flat list, sorted alphabetically by ingredient text** (case-insensitive).
+- **Recipe attribution after an em-dash, italic.** When the same exact text comes from multiple recipes, list all source recipes joined by `, ` (e.g., `*Bowties and Broccoli, Slow Cooker Chicken Cacciatore*`). Don't merge non-identical lines — different text = different list rows even if they refer to the same ingredient.
+- **"For Serving" items** go in their own `### For Serving` sub-section at the bottom. Same alphabetical ordering and attribution rules.
+- **Each "For:" entry pairs the source link with an inline archive link** separated by ` · `. **If `archive_url` is null** for a recipe, omit just the ` · *[archive ↗](...)*` portion — keep the source link.
 
-The recipe title is a markdown link to the original source. Below it, a small italic line links to the archived snapshot on GitHub. **If `archive_url` is null** (no GitHub remote), omit the entire italic line for that recipe — don't render `[offline archive](null)`.
+This swap is deliberate: shoppers don't read by-recipe in the aisle. They want one list grouped the way they actually shop (alphabetically clusters similar items). Attribution stays for context.
 
 ### Step 6: Write the HTML file
 
@@ -111,9 +109,16 @@ Requirements:
 - **Fully self-contained.** No external CSS, no external JS, no external fonts, no images. The user shares the file directly (over Messages/email/AirDrop), so it must work offline with zero network access.
 - **Mobile-friendly.** Includes the viewport meta tag and is comfortable on a phone screen.
 - **Dark-mode aware** via `@media (prefers-color-scheme: dark)`.
+- **Single aggregated shopping list.** All ingredients across all selected recipes appear in one alphabetical list (with a "For Serving" sub-section underneath). No per-recipe sections — shoppers don't shop by recipe.
+- **Calm typographic layout, not cards.** Each row is a hairline-separated list item: checkbox · ingredient text · subtle muted attribution line · action buttons. No borders, no backgrounds, no pills. Recipe attribution lives as inline links in the muted attribution line below the ingredient — present and tappable, but visually subordinate so the ingredient text reads first. Multiple recipes are joined by ` · `. Aesthetic reference: GNOME Adwaita lists / Apple UITableView.
+- **Tap anywhere on a row to toggle the checkbox.** Clicks on action buttons or attribution links are excluded so they do their own thing.
+- **Sticky progress counter with progress bar.** A top-of-page header shows `<checked> / <total> picked up` plus a 2px accent-color progress bar that fills smoothly as items get checked.
+- **Hide picked up toggle.** A text-button next to the counter collapses checked items out of view (the remaining list shrinks as the shopper works through it). Toggle again to show all.
+- **Smooth animations.** Items fade in on render/add and fade out + collapse on delete. Strikethrough transitions in via color animation. Progress bar fills smoothly. All animations honor `prefers-reduced-motion`.
 - **Interactive checkboxes.** Each ingredient is a real `<input type="checkbox">` (not a disabled markdown checkbox). Tapping toggles checked state.
 - **Per-device persistence via `localStorage`** for the full list state — checks, edits, deletions, and added items. Each device gets its own independent state.
 - **Add custom items.** A form at the bottom lets the user type new items mid-shop; they appear under a "Custom" section and persist.
+- **Advanced: bulk import via JSON.** A collapsed `<details>` block beneath the add form ("Advanced — bulk import JSON") accepts a JSON array of items pasted into a textarea. Useful for AI-generated lists from elsewhere. Accepts three shapes — `["milk","bread"]`, `[{"text":"milk"},{"text":"eggs","checked":true}]`, or `{"items": [...]}`. Imported items are merged into Custom alongside typed-in ones; invalid entries are skipped with a count reported back to the user. The accepted shapes are formally defined by `bin/schemas/grocery-list-import.schema.json` (the user can hand this schema to an external AI to generate compliant JSON).
 - **Edit existing item text.** A small ✎ icon on each row enters inline edit mode (contenteditable). Enter saves, Escape cancels.
 - **Delete items.** A small × icon hides the item. Baseline (recipe-derived) items are recoverable via a "Restore deleted" button at the bottom; custom items are removed permanently.
 - **Strikethrough + dim** when checked, so the visual reflects what's been picked up.
@@ -158,49 +163,129 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     }
     h1 { font-size: 1.6rem; margin: 0 0 0.5rem; }
     h2 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--rule); }
-    h2 a { color: inherit; text-decoration: none; }
-    h2 a:hover { text-decoration: underline; }
     h3 { font-size: 1rem; margin: 1rem 0 0.25rem; color: var(--muted); }
     .recipes a { color: inherit; }
-    .archive-link {
-      display: inline-flex;
-      align-items: center;
-      margin-left: 0.4rem;
+    .archive-inline {
       color: var(--muted);
-      opacity: 0.55;
-      transition: opacity 0.15s;
-      vertical-align: middle;
+      text-decoration: none;
+      opacity: 0.75;
+      font-size: 0.85em;
     }
-    .archive-link:hover { opacity: 1; }
-    .archive-link svg { display: block; }
+    .archive-inline:hover { opacity: 1; color: var(--fg); }
     .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; }
     .meta strong { color: var(--fg); }
     ul.recipes { padding-left: 1.25rem; margin: 0.25rem 0 1rem; }
+    .progress {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--rule);
+      padding: 0.7rem 0 0.6rem;
+      margin: 0 0 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .progress-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .progress strong { color: var(--fg); font-weight: 600; }
+    .progress-bar {
+      width: 100%;
+      height: 2px;
+      background: var(--rule);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: inherit;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .toggle-hide {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 5px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .toggle-hide:hover { color: var(--fg); background: var(--rule); }
+    .toggle-hide[aria-pressed="true"] { color: var(--accent); }
     ul.items { list-style: none; padding: 0; margin: 0; }
     ul.items li {
       display: flex;
       align-items: flex-start;
-      gap: 0.6rem;
-      padding: 0.5rem 0;
+      gap: 0.75rem;
+      padding: 0.7rem 0.25rem;
       border-bottom: 1px solid var(--rule);
+      transition: background 0.18s ease;
+      animation: item-fade-in 0.25s ease-out both;
     }
+    ul.items li:hover { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+    ul.items li:active { background: color-mix(in srgb, var(--fg) 7%, transparent); }
+    ul.items li:last-child { border-bottom: none; }
     ul.items li[hidden] { display: none; }
+    ul.items li.exiting {
+      animation: item-fade-out 0.2s ease-in forwards;
+      pointer-events: none;
+    }
+    body.hide-checked ul.items li:has(input[type="checkbox"]:checked) { display: none; }
     ul.items input[type="checkbox"] {
       width: 1.25rem;
       height: 1.25rem;
-      margin: 0.15rem 0 0;
+      margin: 0.2rem 0 0;
       flex-shrink: 0;
       accent-color: var(--accent);
       cursor: pointer;
+      transition: transform 0.12s ease;
     }
-    ul.items .text {
+    ul.items input[type="checkbox"]:active { transform: scale(0.92); }
+    .content {
       flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      cursor: pointer;
+    }
+    .text {
       user-select: text;
       word-break: break-word;
+      transition: color 0.25s ease;
     }
-    ul.items input[type="checkbox"]:checked ~ .text {
+    .attribution {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      line-height: 1.35;
+      transition: opacity 0.25s ease;
+    }
+    .attribution a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .attribution a:hover {
+      color: var(--fg);
+      text-decoration: underline;
+    }
+    ul.items input[type="checkbox"]:checked ~ .content .text {
       text-decoration: line-through;
       color: var(--muted);
+    }
+    ul.items input[type="checkbox"]:checked ~ .content .attribution {
+      opacity: 0.55;
     }
     .text[contenteditable="true"] {
       outline: 2px solid var(--accent);
@@ -208,29 +293,45 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       padding: 0 0.25rem;
       margin: -0.1rem 0;
       background: var(--bg);
+      cursor: text;
     }
     .actions {
       display: inline-flex;
       gap: 0.1rem;
       align-items: flex-start;
       flex-shrink: 0;
-      opacity: 0.35;
-      transition: opacity 0.15s;
+      opacity: 0.25;
+      transition: opacity 0.18s ease;
     }
     ul.items li:hover .actions,
     ul.items li:focus-within .actions { opacity: 1; }
-    @media (hover: none) { .actions { opacity: 0.6; } }
+    @media (hover: none) { .actions { opacity: 0.55; } }
     .actions button {
       background: transparent;
       border: none;
       color: var(--muted);
       cursor: pointer;
       font-size: 0.95rem;
-      padding: 0.15rem 0.4rem;
+      padding: 0.2rem 0.4rem;
       line-height: 1;
       border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
     }
     .actions button:hover { color: var(--fg); background: var(--rule); }
+    @keyframes item-fade-in {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes item-fade-out {
+      from { opacity: 1; max-height: 200px; padding-top: 0.7rem; padding-bottom: 0.7rem; }
+      to { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; transform: translateX(-6px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
     .add-form { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
     .add-form input {
       flex: 1;
@@ -251,6 +352,62 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       border-radius: 6px;
       cursor: pointer;
     }
+    .import-block {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .import-block summary {
+      cursor: pointer;
+      padding: 0.35rem 0;
+      list-style: none;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: color 0.15s;
+    }
+    .import-block summary::-webkit-details-marker { display: none; }
+    .import-block summary::before {
+      content: '▸';
+      font-size: 0.75rem;
+      transition: transform 0.15s ease;
+      display: inline-block;
+    }
+    .import-block[open] summary::before { transform: rotate(90deg); }
+    .import-block summary:hover { color: var(--fg); }
+    .import-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+    }
+    .import-form textarea {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      padding: 0.55rem 0.75rem;
+      color: var(--fg);
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      resize: vertical;
+      min-height: 5rem;
+      line-height: 1.4;
+    }
+    .import-form textarea:focus { outline: none; border-color: var(--accent); }
+    .import-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .import-actions button {
+      padding: 0.4rem 0.85rem;
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--bg);
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .import-status { font-size: 0.85rem; color: var(--muted); }
+    .import-status.error { color: #e07070; }
     .deleted-summary { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
     .deleted-summary[hidden] { display: none; }
     .deleted-summary button {
@@ -282,35 +439,49 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     <p><strong>Generated:</strong> <ISO 8601 datetime></p>
     <p><strong>For:</strong></p>
     <ul class="recipes">
-      <li><a href="<source url 1>" target="_blank" rel="noopener"><Recipe 1 title></a></li>
-      <li><a href="<source url 2>" target="_blank" rel="noopener"><Recipe 2 title></a></li>
+      <li><a href="<source url 1>" target="_blank" rel="noopener"><Recipe 1 title></a> · <a class="archive-inline" href="<archive_url 1>" target="_blank" rel="noopener">archive ↗</a></li>
+      <li><a href="<source url 2>" target="_blank" rel="noopener"><Recipe 2 title></a> · <a class="archive-inline" href="<archive_url 2>" target="_blank" rel="noopener">archive ↗</a></li>
     </ul>
   </div>
 
-  <h2>
-    <a href="<source url 1>" target="_blank" rel="noopener"><Recipe 1 title></a>
-    <a class="archive-link" href="<archive_url 1>" target="_blank" rel="noopener" title="Offline archive on GitHub" aria-label="Offline archive on GitHub">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-    </a>
-  </h2>
+  <div class="progress" aria-live="polite">
+    <div class="progress-info">
+      <span><strong class="checked-count">0</strong> / <strong class="total-count">0</strong> picked up</span>
+      <button class="toggle-hide" type="button" aria-pressed="false">Hide picked up</button>
+    </div>
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+  </div>
+
+  <h2>Shopping List</h2>
   <ul class="items">
-    <li data-id="b-0"><input type="checkbox"><span class="text"><ingredient 1></span><span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span></li>
-    <li data-id="b-1"><input type="checkbox"><span class="text"><ingredient 2></span><span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span></li>
+    <li data-id="b-0">
+      <input type="checkbox">
+      <div class="content">
+        <span class="text"><ingredient text></span>
+        <div class="attribution"><a href="<source url for the contributing recipe>" target="_blank" rel="noopener"><Recipe title></a></div>
+      </div>
+      <span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span>
+    </li>
+    <li data-id="b-1">
+      <input type="checkbox">
+      <div class="content">
+        <span class="text"><another ingredient — alphabetically next></span>
+        <div class="attribution"><a href="<source url A>" target="_blank" rel="noopener"><Recipe A></a> · <a href="<source url B>" target="_blank" rel="noopener"><Recipe B></a></div>
+      </div>
+      <span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span>
+    </li>
   </ul>
 
   <h3>For Serving</h3>
   <ul class="items">
-    <li data-id="b-2"><input type="checkbox"><span class="text"><serving item 1></span><span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span></li>
-  </ul>
-
-  <h2>
-    <a href="<source url 2>" target="_blank" rel="noopener"><Recipe 2 title></a>
-    <a class="archive-link" href="<archive_url 2>" target="_blank" rel="noopener" title="Offline archive on GitHub" aria-label="Offline archive on GitHub">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-    </a>
-  </h2>
-  <ul class="items">
-    <li data-id="b-3"><input type="checkbox"><span class="text"><ingredient 1></span><span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span></li>
+    <li data-id="b-2">
+      <input type="checkbox">
+      <div class="content">
+        <span class="text"><serving item text></span>
+        <div class="attribution"><a href="<source url>" target="_blank" rel="noopener"><Recipe title></a></div>
+      </div>
+      <span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span>
+    </li>
   </ul>
 
   <h2>Custom</h2>
@@ -319,6 +490,17 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     <input type="text" placeholder="Add an item" autocomplete="off">
     <button type="submit">Add</button>
   </form>
+
+  <details class="import-block">
+    <summary>Advanced — bulk import JSON</summary>
+    <form class="import-form">
+      <textarea placeholder='Paste a JSON array of items, e.g. ["milk","bread","eggs"] or [{"text":"milk"},{"text":"eggs","checked":true}]' rows="4" autocomplete="off" spellcheck="false"></textarea>
+      <div class="import-actions">
+        <button type="submit">Import</button>
+        <span class="import-status" aria-live="polite"></span>
+      </div>
+    </form>
+  </details>
 
   <div class="deleted-summary" hidden>
     <button type="button" class="restore-deleted">Restore <span class="count">0</span> deleted item(s)</button>
@@ -341,6 +523,10 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     const customList = document.querySelector('.custom-items');
     const deletedSummary = document.querySelector('.deleted-summary');
     const deletedCountEl = deletedSummary.querySelector('.count');
+    const totalCountEl = document.querySelector('.total-count');
+    const checkedCountEl = document.querySelector('.checked-count');
+    const progressFill = document.querySelector('.progress-bar-fill');
+    const toggleHideBtn = document.querySelector('.toggle-hide');
 
     function makeItem(item) {
       const li = document.createElement('li');
@@ -348,13 +534,16 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       if (item.checked) cb.checked = true;
+      const content = document.createElement('div');
+      content.className = 'content';
       const text = document.createElement('span');
       text.className = 'text';
       text.textContent = item.text;
+      content.appendChild(text);
       const actions = document.createElement('span');
       actions.className = 'actions';
       actions.innerHTML = '<button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button>';
-      li.append(cb, text, actions);
+      li.append(cb, content, actions);
       return li;
     }
 
@@ -362,6 +551,19 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       const n = state.deleted.length;
       deletedSummary.hidden = (n === 0);
       deletedCountEl.textContent = n;
+    }
+
+    function updateCounter() {
+      const visible = document.querySelectorAll('ul.items li:not([hidden]):not(.exiting)');
+      let checked = 0;
+      visible.forEach(li => {
+        const cb = li.querySelector('input[type="checkbox"]');
+        if (cb && cb.checked) checked++;
+      });
+      totalCountEl.textContent = visible.length;
+      checkedCountEl.textContent = checked;
+      const pct = visible.length > 0 ? (checked / visible.length) * 100 : 0;
+      progressFill.style.width = pct + '%';
     }
 
     document.querySelectorAll('li[data-id^="b-"]').forEach(li => {
@@ -374,6 +576,7 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     });
     state.added.forEach(item => customList.appendChild(makeItem(item)));
     updateDeletedSummary();
+    updateCounter();
 
     document.addEventListener('change', e => {
       if (!e.target.matches('input[type="checkbox"]')) return;
@@ -385,6 +588,7 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       else if (e.target.checked) state.checked[id] = true;
       else delete state.checked[id];
       save();
+      updateCounter();
     });
 
     document.addEventListener('click', e => {
@@ -403,14 +607,15 @@ Use this exact template, filling in the placeholders. Keep the structure and the
         const li = e.target.closest('li[data-id]');
         if (!li) return;
         const id = li.dataset.id;
-        if (state.added.find(a => a.id === id)) {
-          state.added = state.added.filter(a => a.id !== id);
-          li.remove();
-        } else {
-          if (!state.deleted.includes(id)) state.deleted.push(id);
-          li.hidden = true;
-        }
-        save(); updateDeletedSummary();
+        const isCustom = !!state.added.find(a => a.id === id);
+        if (isCustom) state.added = state.added.filter(a => a.id !== id);
+        else if (!state.deleted.includes(id)) state.deleted.push(id);
+        li.classList.add('exiting');
+        save(); updateDeletedSummary(); updateCounter();
+        setTimeout(() => {
+          if (isCustom) li.remove();
+          else { li.hidden = true; li.classList.remove('exiting'); }
+        }, 200);
         return;
       }
       if (e.target.closest('.restore-deleted')) {
@@ -418,9 +623,21 @@ Use this exact template, filling in the placeholders. Keep the structure and the
           if (state.deleted.includes(li.dataset.id)) li.hidden = false;
         });
         state.deleted = [];
-        save(); updateDeletedSummary();
+        save(); updateDeletedSummary(); updateCounter();
         return;
       }
+
+      // Row click toggles checkbox — but skip clicks on actions, links, edit-mode text, or the checkbox itself
+      const li = e.target.closest('ul.items li');
+      if (!li) return;
+      if (e.target.closest('.actions') ||
+          e.target.closest('.attribution a') ||
+          e.target.matches('.text[contenteditable="true"]') ||
+          e.target.matches('input[type="checkbox"]')) {
+        return;
+      }
+      const cb = li.querySelector('input[type="checkbox"]');
+      if (cb) cb.click();
     });
 
     document.addEventListener('blur', e => {
@@ -433,7 +650,7 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       const original = e.target.dataset.original || '';
       const found = state.added.find(a => a.id === id);
       if (found) {
-        if (!newText) { state.added = state.added.filter(a => a.id !== id); li.remove(); }
+        if (!newText) { state.added = state.added.filter(a => a.id !== id); li.remove(); updateCounter(); }
         else { found.text = newText; e.target.textContent = newText; }
       } else {
         if (!newText) { e.target.textContent = original; delete state.edits[id]; }
@@ -462,8 +679,55 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       state.added.push(item);
       customList.appendChild(makeItem(item));
       save();
+      updateCounter();
       input.value = '';
       input.focus();
+    });
+
+    document.querySelector('.import-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const ta = e.target.querySelector('textarea');
+      const status = e.target.querySelector('.import-status');
+      const setStatus = (msg, isError) => {
+        status.textContent = msg;
+        status.classList.toggle('error', !!isError);
+      };
+      const raw = ta.value.trim();
+      if (!raw) { setStatus('Paste JSON first', true); return; }
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch (err) { setStatus('Invalid JSON: ' + err.message, true); return; }
+      let arr;
+      if (Array.isArray(parsed)) arr = parsed;
+      else if (parsed && Array.isArray(parsed.items)) arr = parsed.items;
+      else { setStatus('Expected an array or {"items": [...]}', true); return; }
+      let count = 0, skipped = 0;
+      arr.forEach((entry, i) => {
+        let text, checked = false;
+        if (typeof entry === 'string') text = entry.trim();
+        else if (entry && typeof entry === 'object' && typeof entry.text === 'string') {
+          text = entry.text.trim();
+          checked = !!entry.checked;
+        }
+        if (!text) { skipped++; return; }
+        const id = 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '-' + i;
+        const item = { id, text, checked };
+        state.added.push(item);
+        customList.appendChild(makeItem(item));
+        count++;
+      });
+      if (count === 0) { setStatus('No valid items found', true); return; }
+      save();
+      updateCounter();
+      ta.value = '';
+      setStatus(`Imported ${count} item${count === 1 ? '' : 's'}` + (skipped ? ` (skipped ${skipped})` : ''), false);
+    });
+
+    toggleHideBtn.addEventListener('click', () => {
+      const pressed = toggleHideBtn.getAttribute('aria-pressed') === 'true';
+      toggleHideBtn.setAttribute('aria-pressed', String(!pressed));
+      document.body.classList.toggle('hide-checked', !pressed);
+      toggleHideBtn.textContent = !pressed ? 'Show all' : 'Hide picked up';
     });
 
     document.querySelector('.reset').addEventListener('click', () => {
@@ -491,8 +755,21 @@ Use this exact template, filling in the placeholders. Keep the structure and the
 The `KEY` uses the unix timestamp so each generated list has its own localStorage namespace. Each device opens the same file with its own state — no cross-device sync, which is the right default.
 
 **Stable `data-id` assignment is critical.**
-- Baseline (recipe-derived) items use `b-<n>` where `<n>` is sequential **across all sections in the file** (every `<li>` in every `<ul class="items">`, including "For Serving" subsections), starting at `b-0` and counting upward in document order. Don't restart numbering per section — a single counter for the whole file. The localStorage state references these IDs, so the order of items must match exactly between renders.
+- Baseline (recipe-derived) items use `b-<n>` where `<n>` is sequential **across all sections in the file** (every `<li>` in every `<ul class="items">` — Shopping List first, then For Serving), starting at `b-0` and counting upward in document order. Don't restart numbering per section — a single counter for the whole file. The localStorage state references these IDs, so the order of items must match exactly between renders.
 - Custom items get IDs of the form `c-<timestamp>-<random>` generated by the JS at add-time. The skill never has to mint these.
+
+**Aggregation and attribution rules:**
+- Pool every YAML `items[]` entry whose `section: null` into the **Shopping List** section, sorted alphabetically by `text` (case-insensitive).
+- Pool every YAML entry whose `section` is non-null (e.g., `"For Serving"`) into the **For Serving** section, same alphabetical ordering.
+- **Exact-text aggregation across recipes:** if two YAML items have identical `text` from different recipes (e.g., both recipes literally write `"1 tablespoon olive oil"`), render ONE row with multiple links in its attribution line. Pick the lower-numbered `b-<n>` as the row's `data-id`; the other YAML entry's id doesn't get its own DOM node. Different `text` (even if it's effectively the same ingredient) = two separate rows.
+- **Attribution is a typographic line, not a pill.** Each row's `<div class="attribution">` is rendered as muted secondary text below the ingredient — no badges, no chrome. Recipe names are inline links (`<a href="<source url>">`) joined by ` · ` when multiple. Tap a name to open the source in a new tab.
+- **For Serving** items don't get an inline section label — the `<h3>For Serving</h3>` heading already tells the reader what they are. The attribution line is just the recipe link(s).
+- **Custom items** (added at runtime via the add form) have NO attribution line — they live under the `<h2>Custom</h2>` heading and have no source recipe. The JS `makeItem()` produces an item with just `<input>` + `.content > .text` + `.actions`, no `.attribution`.
+
+**UX behaviors baked into the template:**
+- **Tap anywhere on a row** (except the action buttons or recipe-link in the attribution) toggles the checkbox. Implemented via a delegated click handler at the bottom of the main click listener — clicks on `.actions`, `.attribution a`, `.text[contenteditable="true"]`, or the checkbox itself are skipped.
+- **Smooth animations.** Items fade in on initial render and on add (via `@keyframes item-fade-in`). Items fade out and collapse on delete (via `.exiting` class + `@keyframes item-fade-out`, with a 200 ms `setTimeout` to defer `hidden = true` / `remove()`). Strikethrough fades in via a `color` transition on `.text`. The progress bar fill animates smoothly via `transition: width`. All animations respect `prefers-reduced-motion` (a global `@media` rule clamps durations to 0.01ms).
+- **Hairline list, not cards.** Items have no border / no background; just a 1px bottom separator and a subtle hover/active background tint. Visual hierarchy comes from spacing and contrast, not chrome.
 
 If you regenerate the same list with the same timestamp later, the IDs stay aligned and prior state still applies.
 

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "grocery-list-import.schema.json",
+  "title": "Grocery List Import",
+  "description": "Input shapes accepted by the 'Advanced — bulk import JSON' control in the offline grocery list HTML (see grocery-list skill). Use this schema to AI-generate or hand-author item lists for merging into the Custom section. The shopper pastes the JSON into the textarea and presses Import; the imported items behave exactly like manually-typed Custom items (persistent in localStorage, deletable, editable).",
+  "oneOf": [
+    {
+      "type": "array",
+      "description": "Top-level array form. Each entry is either a bare ingredient string or an item object.",
+      "items": { "$ref": "#/definitions/item" },
+      "minItems": 1
+    },
+    {
+      "type": "object",
+      "description": "Wrapped object form. Equivalent to the array form but allows future top-level metadata.",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/item" },
+          "minItems": 1
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "item": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "Bare ingredient text. Equivalent to {\"text\": <string>}."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ingredient line as it should appear in the list. Verbatim — include measurements and prep notes (e.g., '1 lb. butter, softened')."
+            },
+            "checked": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether the item should be pre-checked when imported. Defaults to false."
+            }
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    ["milk", "bread", "eggs"],
+    [
+      { "text": "1 lb. butter, softened" },
+      { "text": "2 cups all-purpose flour" },
+      { "text": "kosher salt", "checked": true }
+    ],
+    {
+      "items": [
+        "milk",
+        { "text": "honey", "checked": false }
+      ]
+    }
+  ]
+}
