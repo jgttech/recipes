@@ -112,8 +112,9 @@ Requirements:
 - **Single aggregated shopping list.** All ingredients across all selected recipes appear in one alphabetical list (with a "For Serving" sub-section underneath). No per-recipe sections — shoppers don't shop by recipe.
 - **Calm typographic layout, not cards.** Each row is a hairline-separated list item: checkbox · ingredient text · subtle muted attribution line · action buttons. No borders, no backgrounds, no pills. Recipe attribution lives as inline links in the muted attribution line below the ingredient — present and tappable, but visually subordinate so the ingredient text reads first. Multiple recipes are joined by ` · `. Aesthetic reference: GNOME Adwaita lists / Apple UITableView.
 - **Tap anywhere on a row to toggle the checkbox.** Clicks on action buttons or attribution links are excluded so they do their own thing.
-- **Sticky progress counter with progress bar.** A top-of-page header shows `<checked> / <total> picked up` plus a 2px accent-color progress bar that fills smoothly as items get checked.
-- **Hide picked up toggle.** A text-button next to the counter collapses checked items out of view (the remaining list shrinks as the shopper works through it). Toggle again to show all.
+- **Sticky progress counter with progress bar.** A top-of-page header shows `<checked> / <total> picked up` plus a 2px progress bar that doubles as the visual divider between the sticky header and the list — filled portion is the accent color, unfilled portion is `var(--rule)`. No extra border-bottom.
+- **"Show recipes" toggle** (upper right of the sticky header, alongside "Hide picked up"). Recipe attribution is **hidden by default** — the calm view is the primary mode. The toggle reveals attribution lines for power users; state persists in localStorage via `state.prefs.showAttribution`.
+- **Hide picked up toggle.** Collapses checked items out of view; persists via `state.prefs.hideChecked`.
 - **Smooth animations.** Items fade in on render/add and fade out + collapse on delete. Strikethrough transitions in via color animation. Progress bar fills smoothly. All animations honor `prefers-reduced-motion`.
 - **Interactive checkboxes.** Each ingredient is a real `<input type="checkbox">` (not a disabled markdown checkbox). Tapping toggles checked state.
 - **Per-device persistence via `localStorage`** for the full list state — checks, edits, deletions, and added items. Each device gets its own independent state.
@@ -180,12 +181,11 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       top: 0;
       z-index: 10;
       background: var(--bg);
-      border-bottom: 1px solid var(--rule);
-      padding: 0.7rem 0 0.6rem;
-      margin: 0 0 0.5rem;
+      padding: 0.7rem 0 0;
+      margin: 0 0 0.6rem;
       display: flex;
       flex-direction: column;
-      gap: 0.45rem;
+      gap: 0.55rem;
       font-size: 0.9rem;
       color: var(--muted);
     }
@@ -194,23 +194,24 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       align-items: center;
       justify-content: space-between;
       gap: 0.5rem;
+      flex-wrap: wrap;
     }
     .progress strong { color: var(--fg); font-weight: 600; }
     .progress-bar {
       width: 100%;
       height: 2px;
       background: var(--rule);
-      border-radius: 999px;
       overflow: hidden;
     }
     .progress-bar-fill {
       height: 100%;
       width: 0%;
       background: var(--accent);
-      border-radius: inherit;
       transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .toggle-hide {
+    .controls { display: inline-flex; gap: 0.15rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .toggle-hide,
+    .toggle-attr {
       background: transparent;
       border: none;
       color: var(--muted);
@@ -221,8 +222,11 @@ Use this exact template, filling in the placeholders. Keep the structure and the
       border-radius: 5px;
       transition: color 0.15s, background 0.15s;
     }
-    .toggle-hide:hover { color: var(--fg); background: var(--rule); }
-    .toggle-hide[aria-pressed="true"] { color: var(--accent); }
+    .toggle-hide:hover,
+    .toggle-attr:hover { color: var(--fg); background: var(--rule); }
+    .toggle-hide[aria-pressed="true"],
+    .toggle-attr[aria-pressed="true"] { color: var(--accent); }
+    body.hide-attribution .attribution { display: none; }
     ul.items { list-style: none; padding: 0; margin: 0; }
     ul.items li {
       display: flex;
@@ -433,7 +437,7 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     .reset:hover { color: var(--fg); border-color: var(--fg); }
   </style>
 </head>
-<body>
+<body class="hide-attribution">
   <h1>Grocery List</h1>
   <div class="meta">
     <p><strong>Generated:</strong> <ISO 8601 datetime></p>
@@ -447,7 +451,10 @@ Use this exact template, filling in the placeholders. Keep the structure and the
   <div class="progress" aria-live="polite">
     <div class="progress-info">
       <span><strong class="checked-count">0</strong> / <strong class="total-count">0</strong> picked up</span>
-      <button class="toggle-hide" type="button" aria-pressed="false">Hide picked up</button>
+      <div class="controls">
+        <button class="toggle-attr" type="button" aria-pressed="false">Show recipes</button>
+        <button class="toggle-hide" type="button" aria-pressed="false">Hide picked up</button>
+      </div>
     </div>
     <div class="progress-bar"><div class="progress-bar-fill"></div></div>
   </div>
@@ -518,6 +525,9 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     state.edits = state.edits || {};
     state.deleted = state.deleted || [];
     state.added = state.added || [];
+    state.prefs = state.prefs || {};
+    if (typeof state.prefs.showAttribution !== 'boolean') state.prefs.showAttribution = false;
+    if (typeof state.prefs.hideChecked !== 'boolean') state.prefs.hideChecked = false;
 
     const save = () => localStorage.setItem(KEY, JSON.stringify(state));
     const customList = document.querySelector('.custom-items');
@@ -527,6 +537,7 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     const checkedCountEl = document.querySelector('.checked-count');
     const progressFill = document.querySelector('.progress-bar-fill');
     const toggleHideBtn = document.querySelector('.toggle-hide');
+    const toggleAttrBtn = document.querySelector('.toggle-attr');
 
     function makeItem(item) {
       const li = document.createElement('li');
@@ -577,6 +588,18 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     state.added.forEach(item => customList.appendChild(makeItem(item)));
     updateDeletedSummary();
     updateCounter();
+
+    // Apply persisted UI prefs
+    if (state.prefs.showAttribution) {
+      document.body.classList.remove('hide-attribution');
+      toggleAttrBtn.setAttribute('aria-pressed', 'true');
+      toggleAttrBtn.textContent = 'Hide recipes';
+    }
+    if (state.prefs.hideChecked) {
+      document.body.classList.add('hide-checked');
+      toggleHideBtn.setAttribute('aria-pressed', 'true');
+      toggleHideBtn.textContent = 'Show all';
+    }
 
     document.addEventListener('change', e => {
       if (!e.target.matches('input[type="checkbox"]')) return;
@@ -724,10 +747,21 @@ Use this exact template, filling in the placeholders. Keep the structure and the
     });
 
     toggleHideBtn.addEventListener('click', () => {
-      const pressed = toggleHideBtn.getAttribute('aria-pressed') === 'true';
-      toggleHideBtn.setAttribute('aria-pressed', String(!pressed));
-      document.body.classList.toggle('hide-checked', !pressed);
-      toggleHideBtn.textContent = !pressed ? 'Show all' : 'Hide picked up';
+      const nowOn = !(toggleHideBtn.getAttribute('aria-pressed') === 'true');
+      toggleHideBtn.setAttribute('aria-pressed', String(nowOn));
+      document.body.classList.toggle('hide-checked', nowOn);
+      toggleHideBtn.textContent = nowOn ? 'Show all' : 'Hide picked up';
+      state.prefs.hideChecked = nowOn;
+      save();
+    });
+
+    toggleAttrBtn.addEventListener('click', () => {
+      const nowHidden = document.body.classList.toggle('hide-attribution');
+      const showing = !nowHidden;
+      toggleAttrBtn.setAttribute('aria-pressed', String(showing));
+      toggleAttrBtn.textContent = showing ? 'Hide recipes' : 'Show recipes';
+      state.prefs.showAttribution = showing;
+      save();
     });
 
     document.querySelector('.reset').addEventListener('click', () => {
@@ -748,9 +782,12 @@ Use this exact template, filling in the placeholders. Keep the structure and the
   "checked": { "b-0": true, "c-1234": true },
   "edits":   { "b-2": "edited text" },
   "deleted": ["b-3", "b-7"],
-  "added":   [{ "id": "c-1234", "text": "milk", "checked": true }]
+  "added":   [{ "id": "c-1234", "text": "milk", "checked": true }],
+  "prefs":   { "showAttribution": false, "hideChecked": false }
 }
 ```
+
+`prefs.showAttribution` defaults to `false` — recipe attribution is hidden by default; the wife's view. The "Show recipes" toggle in the sticky header flips it. `prefs.hideChecked` mirrors the "Hide picked up" toggle. Both persist per-device.
 
 The `KEY` uses the unix timestamp so each generated list has its own localStorage namespace. Each device opens the same file with its own state — no cross-device sync, which is the right default.
 
