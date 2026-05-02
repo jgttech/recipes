@@ -26,6 +26,23 @@ Show the numbered list and ask which recipes the user wants on their grocery run
 
 If the user's input is ambiguous, ask one clarifying question rather than guessing.
 
+### Step 2.5: Ask about embedded standing items (optional)
+
+After the recipe selection, ask the user if they want to embed any standing items into the Custom section — things they always need (eggs, milk, paper towels, etc.) that aren't tied to any recipe. Make it clearly optional: a "no thanks" / empty reply skips this step entirely.
+
+Accept either form:
+
+1. **JSON conforming to `bin/schemas/grocery-list-import.schema.json`** — the schema the user can hand to another AI to format a list. Three accepted shapes: `["a","b"]`, `[{"text":"a"},{"text":"b","checked":true}]`, or `{"items":[...]}`.
+2. **Plain text** — a free-form list (comma-separated, line-separated, bulleted) that you parse into items. Strip bullet/list markers, trim whitespace, drop empty entries.
+
+In both cases, normalize each item into a `{ text, checked }` shape. For plain text, default `checked: false`. For JSON, honor the `checked` flag if present.
+
+Before proceeding, briefly echo back what you parsed: e.g., *"Got it — embedding 24 items into Custom: raspberries, blueberries, sweet potatoes, ... (and 21 more)."* If anything looks off (empty parse, all entries dropped), surface that and re-ask.
+
+The parsed items become **embedded standing items** that get baked into the generated HTML's Custom section as static rows. They use the same `b-N` data-id counter as recipe items (continuing after For Serving), so their checkbox/edit/delete state persists in localStorage just like recipe items, and the Restore-deleted button recovers them.
+
+If the user has nothing to embed, proceed with no Custom rows at generation time (the section's `<ul>` stays empty until they add items at runtime via the add form).
+
 ### Step 3: Aggregate ingredients and resolve URLs
 
 For each selected recipe, read its `recipe.yaml` and capture:
@@ -90,12 +107,18 @@ Write to `<BUNDLE>/grocery-list.<unix-timestamp>.md` as a single aggregated shop
 ### For Serving
 
 - [ ] <serving item text> — *<Recipe title>*
+
+## Custom
+
+- [ ] <embedded item 1>
+- [ ] <embedded item 2>
 ```
 
 Rules:
 - **One flat list, sorted alphabetically by ingredient text** (case-insensitive).
 - **Recipe attribution after an em-dash, italic.** When the same exact text comes from multiple recipes, list all source recipes joined by `, ` (e.g., `*Bowties and Broccoli, Slow Cooker Chicken Cacciatore*`). Don't merge non-identical lines — different text = different list rows even if they refer to the same ingredient.
-- **"For Serving" items** go in their own `### For Serving` sub-section at the bottom. Same alphabetical ordering and attribution rules.
+- **"For Serving" items** go in their own `### For Serving` sub-section. Same alphabetical ordering and attribution rules.
+- **Custom section** appears at the bottom only if the user supplied embedded standing items in Step 2.5. Items render as plain `- [ ]` lines with no attribution (they aren't recipe-derived). Sort alphabetically. If no embedded items, omit the `## Custom` heading entirely.
 - **Each "For:" entry pairs the source link with an inline archive link** separated by ` · `. **If `archive_url` is null** for a recipe, omit just the ` · *[archive ↗](...)*` portion — keep the source link.
 
 This swap is deliberate: shoppers don't read by-recipe in the aisle. They want one list grouped the way they actually shop (alphabetically clusters similar items). Attribution stays for context.
@@ -492,7 +515,19 @@ Use this exact template, filling in the placeholders. Keep the structure and the
   </ul>
 
   <h2>Custom</h2>
-  <ul class="items custom-items"></ul>
+  <ul class="items custom-items">
+    <!-- Embedded standing items, if any (from Step 2.5). data-id continues the b-N counter. Omit attribution — these aren't recipe-derived. -->
+    <li data-id="b-N+1">
+      <input type="checkbox">
+      <div class="content"><span class="text"><embedded item 1></span></div>
+      <span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span>
+    </li>
+    <li data-id="b-N+2">
+      <input type="checkbox">
+      <div class="content"><span class="text"><embedded item 2></span></div>
+      <span class="actions"><button class="edit" type="button" aria-label="Edit">✎</button><button class="delete" type="button" aria-label="Delete">×</button></span>
+    </li>
+  </ul>
   <form class="add-form">
     <input type="text" placeholder="Add an item" autocomplete="off">
     <button type="submit">Add</button>
@@ -792,8 +827,9 @@ Use this exact template, filling in the placeholders. Keep the structure and the
 The `KEY` uses the unix timestamp so each generated list has its own localStorage namespace. Each device opens the same file with its own state — no cross-device sync, which is the right default.
 
 **Stable `data-id` assignment is critical.**
-- Baseline (recipe-derived) items use `b-<n>` where `<n>` is sequential **across all sections in the file** (every `<li>` in every `<ul class="items">` — Shopping List first, then For Serving), starting at `b-0` and counting upward in document order. Don't restart numbering per section — a single counter for the whole file. The localStorage state references these IDs, so the order of items must match exactly between renders.
-- Custom items get IDs of the form `c-<timestamp>-<random>` generated by the JS at add-time. The skill never has to mint these.
+- Static items baked into the HTML use `b-<n>` where `<n>` is sequential **across all sections in the file** in document order: Shopping List first, then For Serving, then Custom embedded items (if any). Single counter, no restart per section. The localStorage state references these IDs, so the order of items must match exactly between renders.
+- Custom items added at runtime via the add form get IDs of the form `c-<timestamp>-<random>` generated by the JS at add-time. The skill never has to mint these.
+- Embedded standing items (from Step 2.5) live in the Custom section's `<ul class="custom-items">` and use the `b-N` prefix because they're baked into the HTML at generation time. The runtime add-form's items get appended to the same `<ul>` later with `c-` IDs — the two coexist.
 
 **Aggregation and attribution rules:**
 - Pool every YAML `items[]` entry whose `section: null` into the **Shopping List** section, sorted alphabetically by `text` (case-insensitive).
