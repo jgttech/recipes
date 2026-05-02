@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../../bin/schemas/recipe.schema.json
+title: Roasted Chicken and Potatoes with Broccoli
+source: Kristen McCaffrey (Slender Kitchen)
+url: https://www.slenderkitchen.com/recipe/roasted-chicken-and-potatoes-with-broccoli
+times:
+  prep: 5 minutes
+  cook: 30 minutes
+servings: "4"
+ingredients:
+  - name: null
+    items:
+      - "1/3 cup chicken broth"
+      - "2 tbsp butter, melted"
+      - "3 cloves garlic, minced"
+      - "1 tbsp Italian seasoning"
+      - "1.33 lbs boneless skinless chicken breast (cut into cutlets)"
+      - "1 lb potatoes, cut into wedges"
+      - "1 lb broccoli"
+      - "Salt and pepper"
+      - "Cooking spray"
+instructions:
+  - lead: "Heat the oven."
+    detail: "Preheat the oven to 425°F and coat a sheet pan with cooking spray."
+  - lead: "Make the broth-butter mixture."
+    detail: "In a small bowl, whisk together the chicken broth, melted butter, minced garlic, and Italian seasoning."
+  - lead: "Roast the potatoes first."
+    detail: "Toss the potato wedges with half of the broth mixture, spread them in a single layer on the prepared sheet pan, season with salt and pepper, and bake for 15 minutes."
+  - lead: "Prep the chicken and broccoli."
+    detail: "While the potatoes roast, toss the chicken and broccoli with the remaining broth mixture, slicing any thicker chicken breasts in half horizontally so everything cooks evenly."
+  - lead: "Finish on one pan."
+    detail: "Pull the sheet pan from the oven, push the potatoes to one side (flipping them if you like), then add the chicken and broccoli to the open space. Season with salt and pepper and return to the oven for 12–15 minutes, until the chicken is cooked through."
+nutrition:
+  calories: "353"
+  protein: "38g"
+  carbs: "29g"
+  fat: "8g"
+  fiber: "6g"
+  sugar: "3g"
+notes: null

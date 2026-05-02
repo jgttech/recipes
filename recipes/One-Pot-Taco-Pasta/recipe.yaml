@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=../../bin/schemas/recipe.schema.json
+title: One-Pot Taco Pasta
+source: Amy Palanjian, Yummy Toddler Food
+url: https://www.yummytoddlerfood.com/one-pot-taco-pasta/
+times:
+  prep: 10 minutes
+  cook: 20 minutes
+servings: "6"
+ingredients:
+  - name: null
+    items:
+      - "1 tablespoon olive oil"
+      - "½ pound ground beef"
+      - "½ cup grated or minced onion"
+      - "½ cup crushed tomatoes"
+      - "2 teaspoons cumin"
+      - "1 teaspoon garlic powder"
+      - "½ teaspoon salt"
+      - "2 cups small pasta (elbow macaroni or similar)"
+      - "1 quart broth (reduced-sodium preferred)"
+      - "14.5 ounces black beans"
+      - "2 cups sweet corn"
+      - "1½ cups shredded cheddar cheese"
+  - name: For Serving
+    items:
+      - "sour cream"
+      - "avocado"
+      - "crushed tortilla chips"
+      - "cilantro"
+      - "salsa"
+      - "hot sauce"
+instructions:
+  - lead: "Brown the beef."
+    detail: "Warm the olive oil in a large pot over medium heat, then add the ground beef and onion. Cook for 8–10 minutes, breaking the meat apart as it browns. Drain off any excess fat."
+  - lead: "Add the seasonings."
+    detail: "Stir the crushed tomatoes, cumin, garlic powder, and salt into the pot."
+  - lead: "Bring the broth to a simmer."
+    detail: "Pour in the broth and crank the heat to high. Once it boils, dial it back to medium so the liquid simmers steadily."
+  - lead: "Add the pasta."
+    detail: "Tip in the pasta and stir gently to distribute."
+  - lead: "Cook until tender."
+    detail: "Let it simmer for about 14 minutes, until the pasta is tender and most of the liquid has been absorbed."
+  - lead: "Finish with beans, corn, and cheese."
+    detail: "Turn off the heat. Stir in the black beans, corn, and shredded cheddar, mixing until the cheese melts through."
+  - lead: "Serve."
+    detail: "Dish it up and let everyone add their preferred toppings."
+nutrition:
+  calories: "432 kcal"
+  protein: "25g"
+  carbs: "46g"
+  fat: "17g"
+  fiber: "8g"
+  sugar: "6g"
+notes: null
