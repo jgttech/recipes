@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../../bin/schemas/recipe.schema.json
+title: Crockpot Chicken Noodle Soup
+source: Erin Clarke (Well Plated)
+url: https://www.wellplated.com/crock-pot-chicken-noodle-soup/
+times:
+  prep: 10 minutes
+  cook: 4 hours
+servings: "6 (about 12 cups)"
+ingredients:
+  - name: null
+    items:
+      - "1½ pounds boneless, skinless chicken breasts (trimmed of excess fat)"
+      - "1 teaspoon kosher salt (plus additional to taste)"
+      - "¼ teaspoon ground black pepper (plus additional to taste)"
+      - "1 small yellow onion (peeled and left whole)"
+      - "3 medium carrots (peeled and cut into ¼-inch coins, about ½ pound)"
+      - "2 large celery stalks (thinly sliced)"
+      - "2 large garlic cloves (minced)"
+      - "3 stalks fresh rosemary (tied into a bundle for easy removal)"
+      - "1 bay leaf"
+      - "7–8 cups low-sodium chicken stock (divided)"
+      - "6 ounces whole wheat wide egg noodles (about 4 heaping cups)"
+  - name: For Serving
+    items:
+      - "Chopped fresh parsley"
+instructions:
+  - lead: "Load the slow cooker."
+    detail: "Place the chicken breasts in the bottom of a 6-quart or larger slow cooker and season with the salt and pepper. Add the whole onion, carrots, celery, minced garlic, rosemary bundle, and bay leaf. Pour 6 cups of the chicken stock over everything, cover, and cook on LOW for 4–6 hours or on HIGH for 2–3 hours, until the chicken reaches an internal temperature of 165°F."
+  - lead: "Shred the chicken."
+    detail: "Transfer the chicken to a plate or bowl and discard the whole onion, the bay leaf, and the rosemary stems. Shred the chicken with two forks, your fingers, or a hand mixer, then set it aside."
+  - lead: "Cook the noodles — stove-top method (recommended)."
+    detail: "Boil the egg noodles separately in a pot of water until al dente per the package directions, drain them, and stir them into the soup. Return the shredded chicken to the slow cooker, stir, and warm everything on LOW for about 5 minutes."
+  - lead: "Cook the noodles — slow cooker method (alternative)."
+    detail: "Stir the uncooked noodles directly into the soup and cook on LOW for about 10 minutes, just until al dente, then stir in the shredded chicken."
+  - lead: "Loosen and serve."
+    detail: "Stir in the remaining 1 cup of chicken stock to reach the consistency you like, taste and adjust salt and pepper, and serve hot topped with chopped fresh parsley."
+nutrition:
+  calories: "302 kcal"
+  protein: "34 g"
+  carbs: "28 g"
+  fat: "6 g"
+  fiber: "2 g"
+  sugar: "3 g"
+notes: null

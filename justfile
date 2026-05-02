@@ -1,9 +1,29 @@
 set quiet
 
+list:
+  claude --dangerously-skip-permissions "/grocery-list"
+
+index:
+  claude -p --dangerously-skip-permissions "/recipe-index"
+
 done:
   #!/usr/bin/env bash
+  set -euo pipefail
+
   git add .
-  git commit -m "Updates to recipes"
+
+  if git diff --cached --quiet; then
+    echo "No changes to commit." >&2
+    exit 0
+  fi
+
+  message="$(claude -p --dangerously-skip-permissions --output-format text "/commit-message" | tr -d '\n' | xargs)"
+  if [ -z "$message" ]; then
+    echo "commit-message returned empty" >&2
+    exit 1
+  fi
+
+  git commit -m "$message"
   git push
 
 recipe arg1 arg2='':
@@ -26,6 +46,7 @@ recipe arg1 arg2='':
   mkdir -p "recipes/$name"
 
   just build "$name" "$url"
+  just index
 
 [parallel]
 build name url: (monolith name url) (archive name url)
