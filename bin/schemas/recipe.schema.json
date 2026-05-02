@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "recipe.schema.json",
+  "title": "Recipe",
+  "description": "Structured representation of a single recipe extracted from a web source. Mirrors the content of recipes/<Name>/README.md in machine-readable form.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "source",
+    "url",
+    "times",
+    "servings",
+    "ingredients",
+    "instructions",
+    "nutrition",
+    "notes"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Display title of the recipe in the source's casing (not the kebab-case directory name)."
+    },
+    "source": {
+      "type": "string",
+      "description": "Author and/or publication, e.g. 'Smitten Kitchen (Deb Perelman)' or 'Beth Moncel, Budget Bytes'."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical URL of the original recipe page."
+    },
+    "times": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prep", "cook"],
+      "properties": {
+        "prep": {
+          "type": ["string", "null"],
+          "description": "Prep time as the source presents it (e.g., '15 minutes'); null if not provided."
+        },
+        "cook": {
+          "type": ["string", "null"],
+          "description": "Cook time as the source presents it (e.g., '55–65 minutes'); null if not provided."
+        }
+      }
+    },
+    "servings": {
+      "type": ["string", "null"],
+      "description": "Servings as the source presents it (e.g., '4–6', '8 to 10'); null if not provided."
+    },
+    "ingredients": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ingredient list grouped by section. Most recipes have a single group with a null name; multi-section recipes use named groups like 'For Serving'.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "items"],
+        "properties": {
+          "name": {
+            "type": ["string", "null"],
+            "description": "Section name (e.g., 'For Serving'); null for the default/main group."
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "Ingredient lines kept verbatim from the source — measurements, units, descriptors, and prep notes ('chopped', 'divided') all preserved."
+          }
+        }
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Numbered steps in order. Each step has a short bolded lead phrase plus a paraphrased detail body.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lead", "detail"],
+        "properties": {
+          "lead": {
+            "type": "string",
+            "description": "Short lead phrase, e.g. 'Brown the chicken.' (rendered bold in the README)."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Paraphrased step body with all technical details preserved (temperatures, times, quantities, equipment, order of operations)."
+          }
+        }
+      }
+    },
+    "nutrition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calories", "protein", "carbs", "fat", "fiber", "sugar"],
+      "description": "Per-serving nutrition. Each field is the source's value as a string (preserving units, e.g. '295 cal', '10.88g'), or null if the source does not provide that field.",
+      "properties": {
+        "calories": { "type": ["string", "null"] },
+        "protein": { "type": ["string", "null"] },
+        "carbs": { "type": ["string", "null"] },
+        "fat": { "type": ["string", "null"] },
+        "fiber": { "type": ["string", "null"] },
+        "sugar": { "type": ["string", "null"] }
+      }
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "description": "Optional free-form notes (e.g., toddler portioning, substitutions). Null when no notes are present."
+    }
+  }
+}
